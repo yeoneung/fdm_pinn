@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+outputs/
+results/
+*.pt
+*.pth
+*.npz
+*.npy
+*.zip
+.env
+.env.*

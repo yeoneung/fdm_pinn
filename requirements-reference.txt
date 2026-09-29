@@ -1,0 +1,3 @@
+# Additional dependency for the Air3D CUDA reference stencil.
+-r requirements-training.txt
+cupy-cuda12x==13.6.0
