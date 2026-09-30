@@ -10,6 +10,8 @@ equations, using direct residual minimization and policy iteration.
 | `experiments/finite_controls` | Finite-action Isaacs games with direct and cached-policy training |
 | `experiments/defects` | Fourier discretization and controlled policy-evaluation perturbations |
 | `configs/experiments.json` | Dimensions, seeds, discretization parameters, network settings, and training budgets |
+| `analysis/` | Checkpoint evaluation, reference comparisons, and aggregation across seeds |
+| `plots/` | LaTeX tables and PDF/PNG figures generated from the computed summaries |
 
 ## Environment
 
@@ -28,6 +30,48 @@ python -m pip install -r requirements-reference.txt
 
 Fourier experiments and analytic checks run on CPU. On Windows, the commands
 below enable UTF-8 explicitly.
+
+## Complete workflow
+
+Run these commands from the repository root:
+
+```sh
+python -X utf8 -B run.py run-all --output outputs/experiments
+python -X utf8 -B run.py analyze --input outputs/experiments/inputs.json --output outputs/analysis
+python -X utf8 -B run.py plot --input outputs/analysis --output outputs/visualizations
+```
+
+`run-all` executes the 91 configurations sequentially in separate processes.
+This includes neural training, GPU reference solves, and CPU Fourier experiments;
+the full workflow requires substantial compute time and disk space. To inspect
+the queue first, add `--dry-run`. Use `--resume` to skip completed configurations;
+an incomplete or mismatched run stops the command and must be moved to a separate
+directory before retrying.
+
+`analyze` runs on CPU. It checks configurations and saved records, evaluates
+checkpoints on fixed test points, compares reference solutions, and computes
+means and sample standard deviations. `plot` produces 21 LaTeX tables in
+`outputs/visualizations/tables/` and seven figures, each as PDF and PNG, in
+`outputs/visualizations/figures/`. LaTeX tables use the `booktabs` package.
+Training results are generated locally; saved runs and pretrained weights are
+not distributed with this repository. Elapsed times depend on the hardware.
+
+The generated `inputs.json` maps each configuration ID to its output directory,
+relative to that manifest. For runs made with individual `run` commands, provide
+the same mapping to `analyze`; every configuration in the registry is required.
+
+| Outputs | Source configurations | Analysis and plotting |
+|---|---|---|
+| Refinement, dimension scaling, training budgets, time slices, policy intervals | `periodic/*` | `analysis/periodic.py`; `plots/periodic.py`, `budget.py`, `slices.py`, `policy.py` |
+| Air3D errors, stencil sensitivity, reference refinement, domain and viscosity comparisons | `air3d/*` | `analysis/air.py`; `plots/air_and_perturbations.py` |
+| Finite-control errors, threshold times, training histories | `finite_controls/*` | `analysis/finite_controls.py`; `plots/finite_controls.py` |
+| Perturbation channels and refinement diagnostics | `defects/*` | `analysis/workflow.py`; `plots/air_and_perturbations.py` |
+
+The analysis also writes `perturbation_refinement.json` and the finite-control
+comparison near a common recorded time in `finite_controls.json`.
+Finite-control threshold times use the first recorded monitoring crossing;
+the summary also reports how many threshold checkpoints pass independent
+held-out evaluation and how many runs reach each threshold.
 
 ## List and run experiments
 

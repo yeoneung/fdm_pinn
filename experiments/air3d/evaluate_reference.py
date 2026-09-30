@@ -30,16 +30,17 @@ def pooled_metrics(pred,ref):
     result['relative_l2_mc_se']=float(influence.std(ddof=1)/np.sqrt(pred.shape[1]))
     return result
 
-def main(runs,output,samples,references):
+def main(runs,output,samples,references,reference_values=None):
     output.mkdir(parents=True,exist_ok=False);torch.set_num_threads(2)
     rng=np.random.default_rng(900302)
     states=rng.uniform([-1.5,-1.5,-np.pi],[1.5,1.5,np.pi],(samples,3));times=np.linspace(0,.5,6)
-    root=Path(references)
-    reference_values={}
-    for path in sorted(root.glob('air_*')):
-        if not path.is_dir():continue
-        record=json.loads((path/'run.json').read_text());assert record['status']=='complete',path
-        reference_values[path.name]=np.array([interpolate(path,i,states) for i in range(6)])
+    if reference_values is None:
+        directories=(references if isinstance(references,dict) else
+                     {p.name:p for p in Path(references).glob('air_*') if p.is_dir()})
+        reference_values={}
+        for name,path in sorted(directories.items()):
+            record=json.loads((path/'run.json').read_text());assert record['status']=='complete',path
+            reference_values[name]=np.array([interpolate(path,i,states) for i in range(6)])
     fine=reference_values['air_n384_nu02_eps01'];rows=[]
     for directory in sorted(runs.glob('seed*')):
         if not (directory/'metrics.json').exists():continue

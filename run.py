@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse
 import importlib
 import json
+import subprocess
 import sys
 
 sys.dont_write_bytecode = True
@@ -18,7 +19,7 @@ def fresh_output(path):
     path = Path(path).resolve()
     if path == ROOT or path.exists():
         raise ValueError(f'Choose a new output directory: {path}')
-    for name in ['experiments', 'configs', '.git']:
+    for name in ['experiments', 'configs', 'analysis', 'plots', '.git']:
         if path.is_relative_to(ROOT / name):
             raise ValueError('Outputs must be outside source and configuration directories.')
     return path
@@ -68,6 +69,43 @@ def run_job(job, output, queries=None):
     else:
         base = load(family, 'benchmark_channels')
         base.run(base.base.Config(**job['config']), output)
+
+
+def run_all(registry, output, resume=False, dry_run=False):
+    from analysis.common import validate_run, write
+    output = output.resolve()
+    if output == ROOT or any(output.is_relative_to(ROOT/name) for name in
+                             ['experiments', 'configs', 'analysis', 'plots', '.git']):
+        raise ValueError('Outputs must be outside source and configuration directories.')
+    manifest = {'runs': {j['id']: j['id'] for j in registry}}
+    if output.exists():
+        if not resume or not (output/'inputs.json').is_file():
+            raise ValueError('Choose a new output directory, or use --resume with an existing inputs.json.')
+        if read(output/'inputs.json') != manifest:
+            raise ValueError('The existing input manifest differs from the configuration registry.')
+    else:
+        fresh_output(output)
+    pending = []
+    for job in registry:
+        directory = output/job['id']
+        if directory.exists():
+            validate_run(job, directory)
+        else:
+            pending.append(job)
+    print(f'{len(pending)} configurations pending; {len(registry)-len(pending)} complete.', flush=True)
+    if dry_run:
+        for job in pending:
+            print(job['id'])
+        return
+    if not output.exists():
+        output.mkdir(parents=True)
+        write(output/'inputs.json', manifest)
+    for index, job in enumerate(pending, 1):
+        print(f"[{index}/{len(pending)}] {job['id']}", flush=True)
+        # Isolate each job's imports and GPU allocations.
+        subprocess.run([sys.executable, '-X', 'utf8', '-B', str(ROOT/'run.py'),
+                        'run', '--id', job['id'], '--output', str(output/job['id'])], check=True)
+        validate_run(job, output/job['id'])
 
 
 def evaluate(family, source, output, references):
@@ -127,6 +165,16 @@ def main():
     p.add_argument('--id', required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--queries', type=Path, help='Optional states/times NPZ for Air3D queries')
+    p = commands.add_parser('run-all', help='Run all configured experiments sequentially')
+    p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--resume', action='store_true', help='Skip complete runs with matching configurations')
+    p.add_argument('--dry-run', action='store_true', help='List pending runs without executing or writing files')
+    p = commands.add_parser('analyze', help='Evaluate and aggregate all completed experiment outputs')
+    p.add_argument('--input', type=Path, required=True, help='JSON manifest mapping configuration IDs to run directories')
+    p.add_argument('--output', type=Path, required=True)
+    p = commands.add_parser('plot', help='Generate tables and figures from computed summaries')
+    p.add_argument('--input', type=Path, required=True, help='Output directory from analyze')
+    p.add_argument('--output', type=Path, required=True)
     p = commands.add_parser('evaluate', help='Evaluate outputs from a completed run')
     p.add_argument('--family', choices=FAMILIES, required=True)
     p.add_argument('--input', type=Path, required=True)
@@ -143,6 +191,17 @@ def main():
                  args.references.resolve() if args.references else None)
         return
     registry = read(ROOT / 'configs/experiments.json')
+    if args.command == 'run-all':
+        run_all(registry, args.output, args.resume, args.dry_run)
+        return
+    if args.command == 'analyze':
+        from analysis.workflow import main as analyze
+        analyze(args.input, registry, fresh_output(args.output))
+        return
+    if args.command == 'plot':
+        from plots.render import main as plot
+        plot(args.input.resolve(), fresh_output(args.output))
+        return
     if args.command == 'list':
         for job in registry:
             if args.family is None or job['family'] == args.family:
