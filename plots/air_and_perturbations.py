@@ -29,8 +29,7 @@ def main():
     timed = read(HERE / 'data/air_time.json')
     sensitivity = read(HERE / 'data/fd_sensitivity.json')
     for name, selected, digits, timed_tag in [
-        ('air', METHODS, 2, '600 seconds'),
-        ('primary_air', ['AD_direct', 'FD_PI'], 1, '600-second budget'),
+        ('air', METHODS, 1, '600-second budget'),
     ]:
         rows = []
         for tag, data in [('30,000 updates', fixed), (timed_tag, timed)]:
@@ -64,7 +63,6 @@ def main():
     for name, spec, header in [
         ('air_reference_audit', 'llrr', r'Channel & Variation & Relative difference [\%] & Max sampled difference'),
         ('air_zero_comparator', 'rrcc', r'$\nu$ & Cells & $t=0$ difference [\%] & Pooled difference [\%]'),
-        ('air_domain_audit', 'rrcc', r'Half extent & Cells & $t=0$ difference [\%] & Pooled difference [\%]'),
     ]:
         plain_table(name, spec, header, reference_rows[name])
 

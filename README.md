@@ -50,7 +50,7 @@ directory before retrying.
 
 `analyze` runs on CPU. It checks configurations and saved records, evaluates
 checkpoints on fixed test points, compares reference solutions, and computes
-means and sample standard deviations. `plot` produces 21 LaTeX tables in
+means and sample standard deviations. `plot` produces 16 LaTeX tables in
 `outputs/visualizations/tables/` and seven figures, each as PDF and PNG, in
 `outputs/visualizations/figures/`. LaTeX tables use the `booktabs` package.
 Training results are generated locally; saved runs and pretrained weights are
@@ -69,6 +69,8 @@ the same mapping to `analyze`; every configuration in the registry is required.
 
 The analysis also writes `perturbation_refinement.json` and the finite-control
 comparison near a common recorded time in `finite_controls.json`.
+Individual run records, timings, and memory measurements remain in the
+analysis JSON files. Domain comparisons remain in `air_reference_tables.json`.
 Finite-control threshold times use the first recorded monitoring crossing;
 the summary also reports how many threshold checkpoints pass independent
 held-out evaluation and how many runs reach each threshold.

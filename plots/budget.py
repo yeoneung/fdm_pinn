@@ -11,20 +11,13 @@ HERE=Path(__file__).resolve().parent
 
 
 def main():
-    primary=json.loads((HERE/'data/periodic.json').read_text())
     d=json.loads((HERE/'data/extended.json').read_text());assert d['all_passed'] and d['configured_runs']==6
     count=check_summary(d['groups']); names={'AD_direct':'Direct PINN','FD_PI':'FD-PINN-PI'}
     rows=[]
-    for budget in [180,900]:
-        for method in ['AD_direct','FD_PI']:
-            g=primary['groups'][f'd50_{method}'] if budget==180 else d['groups'][method]
-            rows.append(f"{budget} & {names[method]} & {pm(g['relative_l2'],100)} & {pm(g['steps'],digits=0)} & {pm(g['training_seconds'],digits=1)} "+r'\\')
-        if budget==180:rows.append(r'\midrule')
-    table('extended_fifty','rlrrr',r'Budget (s) & Method & Original error (\%) & Updates & Time (s)',rows)
-    rows=[]
-    for r in sorted(d['individual_runs'],key=lambda x:(x['method'],x['seed'])):
-        rows.append(f"{names[r['method']]} & {r['seed']} & {100*r['final']['relative_l2']:.4f} & {100*r['final']['gradient_relative_l2']:.4f} & {r['training_seconds']:.2f} & {r['steps']} & {r['training_peak_allocated_bytes']/2**20:.1f} "+r'\\')
-    table('extended_individual','lrrrrrr',r'Method & Seed & Value (\%) & Gradient (\%) & Time (s) & Updates & MiB',rows)
+    for method in ['AD_direct','FD_PI']:
+        g=d['groups'][method]
+        rows.append(f"{names[method]} & {pm(g['relative_l2'],100)} & {pm(g['steps'],digits=0)} "+r'\\')
+    table('extended_fifty','lrr',r'Method & Original error (\%) & Updates',rows)
     plt.rcParams.update({'font.size':10,'axes.spines.top':False,'axes.spines.right':False,'pdf.fonttype':42})
     fig,ax=plt.subplots(figsize=(6.6,3.3),constrained_layout=True)
     for method,color,marker in [('AD_direct','#3567A8','o'),('FD_PI','#B15B30','D')]:

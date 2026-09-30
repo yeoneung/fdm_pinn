@@ -44,8 +44,8 @@ def main():
     table('priority_derivative_diagnostics','rlrrrr',r'$d$ & Method & Gradient error (\%) & $R_0$ RMS & $R_\nu$ RMS & $R_h$ RMS',rows)
     rows=[]
     for name,ref in sorted(d['reference_runs'].items(),key=lambda x:(-x[1]['viscosity'],x[1]['n'],x[1]['dt'])):
-        rows.append(f"{ref['viscosity']:.2f} & {ref['n']} & {ref['dt']:.6g} & {ref['steps']} & {ref['total_seconds']:.1f} & {max(ref['extra_stabilization']):.6g} "+r'\\')
-    table('priority_reference_details','rrrrrr',r'$\nu$ & Grid & $\Delta t$ & Steps & Time (s) & Extra variance',rows)
+        rows.append(f"{ref['viscosity']:.2f} & {ref['n']} & {ref['dt']:.6g} & {ref['steps']} & {max(ref['extra_stabilization']):.6g} "+r'\\')
+    table('priority_reference_details','rrrrr',r'$\nu$ & Grid & $\Delta t$ & Steps & Extra variance',rows)
     rows=[]
     for dim in [2,5,10,20,50]:
         xs=[g[f'd2_FD_PI_nu{nu:g}'] for nu in [.08,.04,.02,.01]] if dim==2 else [g[f'd{dim}_FD_PI']]
@@ -53,14 +53,8 @@ def main():
             cfg=x['config']
             record=next(r for r in d['individual_runs'] if r['config']==cfg and r['method']=='FD_PI')
             c=record['self_checks']
-            rows.append(f"{dim} & {cfg['viscosity']:.6g} & {cfg['h']:.6g} & {cfg['tau']:.6g} & {c['sufficient_spatial_margin']:.6g} & {c['time_cfl']:.4f} "+r'\\')
+            rows.append(f"{dim} & {cfg['viscosity']:.6g} & {cfg['h']:.6g} & {cfg['tau']:.6g} & {c['sufficient_spatial_margin']:.6g} & {c['time_cfl']:.3f} "+r'\\')
     table('priority_coefficients','rrrrrr',r'$d$ & $\nu$ & $h$ & $\tau$ & Spatial margin & Time CFL',rows)
-    for stage,name in [('fixed_target','priority_individual_fixed'),('dimension_scaling','priority_individual_scaling')]:
-        rows=[]
-        records=sorted([r for r in d['individual_runs'] if r['stage']==stage],key=lambda r:(r['config']['dimension'],r['method'],-r['config']['viscosity'],r['seed']))
-        for r in records:
-            rows.append(f"{r['config']['dimension']} & {NAMES[r['method']]} & {r['seed']} & {r['config']['viscosity']:.4g} & {100*r['final']['relative_l2']:.4f} & {r['training_seconds']:.2f} & {r['steps']} & {r['training_peak_allocated_bytes']/2**20:.1f} "+r'\\')
-        table(name,'rlrrrrrr',r'$d$ & Method & Seed & $\nu$ & Error (\%) & Time (s) & Updates & MiB',rows)
 
     plt.rcParams.update({'font.size':10,'axes.spines.top':False,'axes.spines.right':False,'pdf.fonttype':42})
     fig,axes=plt.subplots(1,2,figsize=(8.2,3.25),constrained_layout=True)
